@@ -14,11 +14,11 @@ interpreter.prototype.validateScript = function (script) {
 	    console.log(script[i]);
 	    console.log(commandToOpcode[script[i]]);
 
-		if (script[i] === "OP_IF") {
+		if (script[i] === "OP_IF" || script[i] === "OP_NOTIF") {
 			// if you've already seen this IF due to recursion, ignore.
-			if (tracker[i] == null || tracker[i] !== "OP_IF")
+			if (tracker[i] == null || tracker[i] !== script[i])
 			{
-				tracker[i] = "OP_IF";
+				tracker[i] = script[i];
 
 				// if the search fails somehow, fail the script
 				if (this.search(script, tracker, i + 1) === false) return false;
@@ -57,7 +57,7 @@ interpreter.prototype.validateScript = function (script) {
 	return true;
 }
 
-// Search for the ENDIF corresponding to the IF at script[if_index].
+// Search for the ENDIF corresponding to the IF/NOTIF at script[if_index].
 // Along the way, mark all ELSEs. Recurse if another IF is found.
 // Mark the ENDIF once it is found.
 interpreter.prototype.search = function (script, tracker, if_index) {
@@ -86,13 +86,13 @@ interpreter.prototype.search = function (script, tracker, if_index) {
 			return true;
 		}
 
-		else if (script[i] === "OP_IF") {
+		else if (script[i] === "OP_IF" || script[i] === "OP_NOTIF") {
 
 			// if you've already seen this IF through recursion, ignore.
 			// otherwise, recurse.
-			if (tracker[i] != null && tracker[i] === "OP_IF") continue;
-			tracker[i] = "OP_IF";
-			if (this.search(script, tracker, i) === false) return false;;
+			if (tracker[i] != null && tracker[i] === script[i]) continue;
+			tracker[i] = script[i];
+			if (this.search(script, tracker, i) === false) return false;
 		}
 	}
 
@@ -212,7 +212,7 @@ interpreter.prototype.nextStep = function (mainstack, altstack, script, index) {
 			if (top != 0)
 			{
 				for (var j = index; j < script.length; j++) {
-					// if the OP_IF condition is false and there is an OP_ELSE
+					// if the OP_(NOT)IF condition is false and there is an OP_ELSE
 					// execute the opcodes right after the OP_ELSE
 					if (script[j + 1] === "OP_ELSE")
 						return j + 2;
